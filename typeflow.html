@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#080808">
+<title>TypeFlow — тест скорости печати</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Unbounded:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#080808;--s0:#0e0e0e;--s1:#141414;--s2:#1a1a1a;
+  --b0:#1f1f1f;--b1:#2a2a2a;--b2:#383838;
+  --t0:#f8f8f8;--t1:#aaaaaa;--t2:#666;--t3:#333;
+  --ok:#e0e0e0;--err:#ff3b3b;--warn:#e0a800;
+  --elo-gold:#d4a843;--elo-silver:#9ea3ae;--elo-bronze:#b07d52;
+  --r:10px;--r2:16px;--r3:20px;
+  --ff:'JetBrains Mono',monospace;--fh:'Unbounded',sans-serif;
+  --accent:#f8f8f8;
+}
+
+/* LIGHT THEME */
+body.theme-light{
+  --bg:#f0f0ed;--s0:#e8e8e4;--s1:#e0e0dc;--s2:#d8d8d4;
+  --b0:#c8c8c4;--b1:#b8b8b4;--b2:#a0a09c;
+  --t0:#1a1a1a;--t1:#444;--t2:#777;--t3:#aaa;
+  --ok:#1a1a1a;--err:#cc2222;
+}
+body.theme-sepia{
+  --bg:#1a1510;--s0:#201a12;--s1:#261f14;--s2:#2c2418;
+  --b0:#3a3020;--b1:#4a3e2a;--b2:#5a4e38;
+  --t0:#f0d890;--t1:#c4a85a;--t2:#8a7040;--t3:#5a4820;
+  --ok:#f0d890;--err:#ff6644;
+}
+body.theme-blue{
+  --bg:#080c14;--s0:#0c1220;--s1:#101828;--s2:#141e30;
+  --b0:#1a2840;--b1:#243450;--b2:#304460;
+  --t0:#a8d0ff;--t1:#6898cc;--t2:#3a5a88;--t3:#1e3058;
+  --ok:#a8d0ff;--err:#ff6080;
+}
+
+html{font-size:16px;height:100%}
+body{background:var(--bg);color:var(--t1);font-family:var(--ff);min-height:100%;display:flex;flex-direction:column;align-items:center;overflow-x:hidden;transition:background .3s,color .3s}
+body::after{content:'';position:fixed;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E");pointer-events:none;z-index:9999}
+
+.app{width:100%;max-width:1000px;padding:0 20px;flex:1;display:flex;flex-direction:column}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0 16px;border-bottom:1px solid var(--b0);animation:fadeUp .5s both}
+.logo{font-family:var(--fh);font-size:1rem;font-weight:900;color:var(--t0);letter-spacing:-.03em;display:flex;align-items:center;gap:8px;cursor:pointer}
+.logo-dot{width:8px;height:8px;background:var(--t0);border-radius:50%;display:inline-block}
+.topbar-nav{display:flex;align-items:center;gap:6px}
+.nav-btn{background:none;border:1px solid transparent;color:var(--t2);font-family:var(--ff);font-size:.72rem;padding:7px 14px;border-radius:var(--r);cursor:pointer;transition:all .2s;letter-spacing:.05em;white-space:nowrap}
+.nav-btn:hover{color:var(--t1);border-color:var(--b1)}
+.nav-btn.active{color:var(--t0);border-color:var(--b1);background:var(--s1)}
+.nav-btn.accent{background:var(--t0);color:#000;border-color:transparent;font-weight:700}
+.nav-btn.accent:hover{opacity:.9}
+.avatar-btn{width:34px;height:34px;border-radius:50%;background:var(--s1);border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.75rem;color:var(--t1);transition:all .2s;font-family:var(--fh);font-weight:700}
+.avatar-btn:hover{border-color:var(--b2);color:var(--t0)}
+
+/* PAGES */
+.page{display:none;flex:1;flex-direction:column;padding:32px 0}
+.page.active{display:flex;animation:fadeUp .4s both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* COMING SOON PAGE */
+.coming-soon-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center;padding:40px 0;min-height:400px}
+.cs-icon{font-size:3rem;opacity:.4;margin-bottom:4px;filter:grayscale(1)}
+.cs-title{font-family:var(--fh);font-size:1.8rem;font-weight:900;color:var(--t0);letter-spacing:-.04em}
+.cs-sub{font-size:.82rem;color:var(--t2);line-height:1.8;max-width:340px}
+.cs-badge{display:inline-flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--b0);border-radius:30px;padding:8px 20px;font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--t2)}
+.cs-badge::before{content:'';width:6px;height:6px;background:var(--warn);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.cs-features{display:flex;flex-direction:column;gap:8px;width:100%;max-width:340px;margin-top:8px}
+.cs-feat{background:var(--s1);border:1px solid var(--b0);border-radius:var(--r);padding:12px 16px;display:flex;align-items:center;gap:12px;text-align:left}
+.cs-feat-icon{font-size:1.1rem;width:28px;text-align:center;flex-shrink:0;opacity:.6}
+.cs-feat-text{font-size:.75rem;color:var(--t2);line-height:1.5}
+.cs-feat-text strong{display:block;font-size:.8rem;color:var(--t1);margin-bottom:2px;font-family:var(--ff)}
+.cs-notify-row{display:flex;gap:8px;width:100%;max-width:340px}
+.cs-notify-inp{flex:1;background:var(--s1);border:1px solid var(--b0);border-radius:var(--r);color:var(--t0);font-family:var(--ff);font-size:.8rem;padding:10px 14px;outline:none;transition:border-color .2s}
+.cs-notify-inp:focus{border-color:var(--b2)}
+.cs-notify-inp::placeholder{color:var(--t3)}
+.cs-notify-btn{background:var(--t0);color:#000;border:none;font-family:var(--ff);font-weight:700;font-size:.72rem;padding:10px 16px;border-radius:var(--r);cursor:pointer;white-space:nowrap;transition:all .2s;letter-spacing:.03em}
+.cs-notify-btn:hover{opacity:.9}
+
+/* TYPING PAGE */
+.settings-strip{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:28px}
+.pill-group{display:flex;align-items:center;background:var(--s1);border:1px solid var(--b0);border-radius:var(--r2);padding:4px;gap:2px}
+.pill-label{font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);padding:0 8px;white-space:nowrap}
+.pill{background:none;border:none;color:var(--t2);font-family:var(--ff);font-size:.75rem;padding:6px 13px;border-radius:var(--r);cursor:pointer;transition:all .15s;white-space:nowrap}
+.pill:hover{color:var(--t1)}
+.pill.on{background:var(--b0);color:var(--t0)}
+.divider-v{width:1px;height:18px;background:var(--b0);margin:0 2px}
+
+.settings-btn{background:none;border:1px solid var(--b0);color:var(--t2);font-family:var(--ff);font-size:.72rem;padding:7px 14px;border-radius:var(--r);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.settings-btn:hover{color:var(--t1);border-color:var(--b1)}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat-box{background:var(--s1);border:1px solid var(--b0);border-radius:var(--r2);padding:14px 18px;display:flex;flex-direction:column;gap:3px}
+.stat-box .lbl{font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
+.stat-box .val{font-family:var(--fh);font-size:1.5rem;font-weight:700;color:var(--t0);line-height:1;transition:all .2s}
+.stat-box .unit{font-size:.6rem;color:var(--t3)}
+
+.pbar-wrap{width:100%;height:2px;background:var(--b0);border-radius:2px;margin-bottom:16px;overflow:hidden}
+.pbar{height:100%;background:var(--t1);border-radius:2px;transition:width 1s linear;width:100%}
+
+/* TYPER BOX */
+.typer-box{background:var(--s1);border:1px solid var(--b0);border-radius:var(--r3);padding:32px 36px;position:relative;cursor:text;transition:border-color .3s;margin-bottom:20px;overflow:hidden}
+.typer-box:focus-within{border-color:var(--b2)}
+.words-wrap{height:calc(1.3rem * 1.9 * 3);overflow:hidden;position:relative;user-select:none}
+#words-display{
+  font-size:1.3rem;
+  line-height:1.9;
+  position:relative;
+  transition:transform .12s ease,filter .3s;
+  word-spacing:2px;
+}
+#words-display.blur{filter:blur(5px)}
+.letter{color:var(--t3);transition:color .07s;position:relative;display:inline}
+.letter.ok{color:var(--ok)}
+.letter.bad{color:var(--err);text-decoration-line:underline;text-decoration-color:rgba(255,59,59,.3)}
+.letter.extra{color:var(--err);font-size:.9em}
+.letter.cur::before{content:'';position:absolute;left:0;top:15%;bottom:15%;width:2px;background:var(--t0);border-radius:1px;animation:blink .9s step-start infinite}
+#hidden-inp{position:absolute;opacity:0;pointer-events:none;top:0;left:0;width:1px;height:1px}
+.start-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);pointer-events:none;transition:opacity .3s;border-radius:var(--r3)}
+.start-hint.gone{opacity:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+.ctrl-row{display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-restart{background:none;border:1px solid var(--b0);color:var(--t2);font-family:var(--ff);font-size:.75rem;padding:10px 22px;border-radius:var(--r2);cursor:pointer;transition:all .2s;letter-spacing:.05em;display:flex;align-items:center;gap:7px}
+.btn-restart:hover{color:var(--t1);border-color:var(--b1)}
+.btn-restart:active{transform:scale(.97)}
+.ico-spin{transition:transform .4s ease;display:inline-block}
+.btn-restart:hover .ico-spin{transform:rotate(-180deg)}
+kbd{background:var(--b0);border-radius:4px;padding:1px 6px;font-size:.62rem;color:var(--t2);font-family:var(--ff)}
+
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.shake-it{animation:shake .25s ease}
+
+/* RESULTS MODAL */
+.overlay{position:fixed;inset:0;background:rgba(8,8,8,.93);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .35s;backdrop-filter:blur(6px)}
+.overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--s0);border:1px solid var(--b1);border-radius:24px;padding:44px 52px;max-width:580px;width:100%;transform:scale(.94) translateY(16px);transition:transform .4s cubic-bezier(.34,1.56,.64,1)}
+.overlay.show .modal{transform:scale(1) translateY(0)}
+.modal-title{font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--t2);margin-bottom:24px;text-align:center}
+.result-badge{display:block;border:1px solid var(--b1);border-radius:8px;padding:5px 14px;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin:0 auto 14px;text-align:center;width:fit-content}
+.result-badge.gold{border-color:var(--elo-gold);color:var(--elo-gold)}
+.result-wpm{font-family:var(--fh);font-size:5rem;font-weight:900;color:var(--t0);text-align:center;line-height:1;margin-bottom:4px}
+.result-sub{text-align:center;font-size:.72rem;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:32px}
+.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:12px}
+.rg-item{text-align:center}
+.rg-lbl{font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-bottom:5px}
+.rg-val{font-family:var(--fh);font-size:1.4rem;font-weight:700;color:var(--t1)}
+.elo-change{text-align:center;font-size:.8rem;margin-bottom:30px;color:var(--t2)}
+.elo-change span{color:var(--t0);font-family:var(--fh);font-weight:700}
+.elo-pos{color:#4caf50!important}
+.elo-neg{color:var(--err)!important}
+.modal-actions{display:flex;gap:10px;justify-content:center}
+.btn-prim{background:var(--t0);color:#000;border:none;font-family:var(--ff);font-size:.78rem;padding:12px 28px;border-radius:var(--r2);cursor:pointer;font-weight:700;letter-spacing:.04em;transition:all .2s}
+.btn-prim:hover{opacity:.9;transform:translateY(-1px)}
+.btn-sec{background:none;color:var(--t2);border:1px solid var(--b1);font-family:var(--ff);font-size:.78rem;padding:12px 28px;border-radius:var(--r2);cursor:pointer;letter-spacing:.04em;transition:all .2s}
+.btn-sec:hover{color:var(--t1);border-color:var(--b2)}
+
+/* SETTINGS MODAL */
+.settings-overlay{position:fixed;inset:0;background:rgba(8,8,8,.93);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .3s;backdrop-filter:blur(8px)}
+.settings-overlay.show{opacity:1;pointer-events:all}
+.settings-modal{background:var(--s0);border:1px solid var(--b1);border-radius:24px;padding:36px 40px;max-width:520px;width:100%;transform:scale(.95) translateY(12px);transition:transform .35s cubic-bezier(.34,1.56,.64,1);max-height:90vh;overflow-y:auto}
+.settings-overlay.show .settings-modal{transform:scale(1) translateY(0)}
+.settings-modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.settings-modal-title{font-family:var(--fh);font-size:.9rem;font-weight:700;color:var(--t0)}
+.settings-close{background:none;border:none;color:var(--t2);font-size:1.2rem;cursor:pointer;padding:4px 8px;border-radius:6px;transition:color .2s}
+.settings-close:hover{color:var(--t0)}
+
+.settings-section{margin-bottom:24px}
+.settings-section-title{font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--t3);margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.settings-section-title::after{content:'';flex:1;height:1px;background:var(--b0)}
+
+.theme-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.theme-card{border:2px solid var(--b0);border-radius:12px;padding:12px 8px;cursor:pointer;transition:all .2s;text-align:center;background:none}
+.theme-card:hover{border-color:var(--b2)}
+.theme-card.active{border-color:var(--t0)}
+.theme-card .tc-preview{height:32px;border-radius:8px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:3px}
+.theme-card .tc-name{font-size:.62rem;color:var(--t2);font-family:var(--ff)}
+.theme-card.active .tc-name{color:var(--t0)}
+.tc-dot{width:8px;height:8px;border-radius:50%}
+
+/* Sound cards */
+.sound-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sound-card{border:2px solid var(--b0);border-radius:12px;padding:14px 10px;cursor:pointer;transition:all .2s;text-align:center;background:none;position:relative}
+.sound-card:hover{border-color:var(--b2)}
+.sound-card.active{border-color:var(--t0)}
+.sound-card .sc-icon{font-size:1.4rem;margin-bottom:6px;display:block}
+.sound-card .sc-name{font-size:.68rem;color:var(--t2);font-family:var(--ff);display:block}
+.sound-card .sc-desc{font-size:.58rem;color:var(--t3);font-family:var(--ff);display:block;margin-top:2px}
+.sound-card.active .sc-name{color:var(--t0)}
+.sc-play{position:absolute;top:6px;right:6px;background:var(--b0);border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:.6rem;color:var(--t2);display:flex;align-items:center;justify-content:center;transition:all .15s;opacity:0}
+.sound-card:hover .sc-play{opacity:1}
+.sc-play:hover{background:var(--b1);color:var(--t0)}
+
+/* Volume slider */
+.vol-row{display:flex;align-items:center;gap:12px;margin-top:8px}
+.vol-label{font-size:.65rem;color:var(--t2);width:48px}
+.vol-slider{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;background:var(--b1);outline:none;cursor:pointer}
+.vol-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--t0);cursor:pointer;transition:transform .15s}
+.vol-slider::-webkit-slider-thumb:hover{transform:scale(1.2)}
+.vol-val{font-size:.65rem;color:var(--t1);width:28px;text-align:right;font-family:var(--fh)}
+
+/* Toggle switch */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--b0)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-info{flex:1}
+.toggle-name{font-size:.8rem;color:var(--t1);margin-bottom:2px}
+.toggle-desc{font-size:.65rem;color:var(--t3)}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;cursor:pointer;inset:0;background:var(--b1);border-radius:11px;transition:background .2s}
+.toggle input:checked+.toggle-track{background:var(--t0)}
+.toggle-track::before{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:var(--t2);transition:all .2s}
+.toggle input:checked+.toggle-track::before{transform:translateX(18px);background:#000}
+
+/* AUTH PAGE */
+.auth-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:40px 0}
+.auth-card{background:var(--s0);border:1px solid var(--b0);border-radius:var(--r3);padding:40px 44px;width:100%;max-width:420px}
+.auth-title{font-family:var(--fh);font-size:1.2rem;font-weight:700;color:var(--t0);margin-bottom:6px}
+.auth-sub{font-size:.72rem;color:var(--t2);margin-bottom:30px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field label{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.field input{background:var(--s1);border:1px solid var(--b0);border-radius:var(--r);color:var(--t0);font-family:var(--ff);font-size:.88rem;padding:12px 14px;outline:none;transition:border-color .2s;width:100%}
+.field input:focus{border-color:var(--b2)}
+.field input::placeholder{color:var(--t3)}
+.auth-btn{width:100%;background:var(--t0);color:#000;border:none;font-family:var(--ff);font-size:.82rem;font-weight:700;padding:13px;border-radius:var(--r);cursor:pointer;letter-spacing:.04em;transition:all .2s;margin-top:8px}
+.auth-btn:hover{opacity:.9}
+.auth-switch{text-align:center;font-size:.72rem;color:var(--t2);margin-top:18px}
+.auth-switch a{color:var(--t1);cursor:pointer;text-decoration:none}
+.auth-switch a:hover{color:var(--t0)}
+.auth-error{background:rgba(255,59,59,.08);border:1px solid rgba(255,59,59,.2);border-radius:var(--r);padding:10px 14px;font-size:.72rem;color:var(--err);margin-bottom:14px;display:none}
+.auth-error.show{display:block}
+
+/* PROFILE PAGE */
+.profile-header{display:flex;align-items:flex-end;gap:24px;margin-bottom:36px;flex-wrap:wrap}
+.profile-avatar{width:80px;height:80px;background:var(--s1);border:2px solid var(--b1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fh);font-size:1.8rem;font-weight:900;color:var(--t0);flex-shrink:0}
+.profile-info{flex:1}
+.profile-name{font-family:var(--fh);font-size:1.5rem;font-weight:700;color:var(--t0);margin-bottom:4px}
+.profile-joined{font-size:.68rem;color:var(--t3);margin-bottom:10px}
+.profile-badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:6px;border:1px solid var(--b1);color:var(--t2)}
+.badge.gold{border-color:rgba(212,168,67,.4);color:var(--elo-gold);background:rgba(212,168,67,.05)}
+.profile-elo-card{background:var(--s1);border:1px solid var(--b0);border-radius:var(--r3);padding:20px 24px;display:flex;align-items:center;gap:20px;margin-bottom:28px}
+.elo-rank-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+.elo-rank-icon.iron{background:rgba(100,100,100,.15);border:1px solid rgba(100,100,100,.2)}
+.elo-rank-icon.bronze{background:rgba(176,125,82,.1);border:1px solid rgba(176,125,82,.2)}
+.elo-rank-icon.silver{background:rgba(158,163,174,.1);border:1px solid rgba(158,163,174,.2)}
+.elo-rank-icon.gold{background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.2)}
+.elo-rank-icon.diamond{background:rgba(100,200,255,.08);border:1px solid rgba(100,200,255,.2)}
+.elo-rank-icon.master{background:rgba(180,100,255,.08);border:1px solid rgba(180,100,255,.2)}
+.elo-info{flex:1}
+.elo-rank-name{font-family:var(--fh);font-size:.8rem;font-weight:700;color:var(--t0);margin-bottom:2px}
+.elo-points{font-size:.68rem;color:var(--t2)}
+.elo-bar-track{width:100%;height:4px;background:var(--b0);border-radius:2px;margin-top:10px;overflow:hidden}
+.elo-bar-fill{height:100%;border-radius:2px;background:var(--t1);transition:width .6s ease}
+.profile-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:28px}
+.pg-item{background:var(--s1);border:1px solid var(--b0);border-radius:var(--r2);padding:16px;text-align:center}
+.pg-lbl{font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:6px}
+.pg-val{font-family:var(--fh);font-size:1.4rem;font-weight:700;color:var(--t0)}
+.section-title{font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--b0)}
+.history-list{display:flex;flex-direction:column;gap:6px;margin-bottom:28px}
+.history-item{background:var(--s1);border:1px solid var(--b0);border-radius:var(--r);padding:12px 16px;display:flex;align-items:center;gap:14px;transition:border-color .2s}
+.history-item:hover{border-color:var(--b1)}
+.hi-wpm{font-family:var(--fh);font-size:1rem;font-weight:700;color:var(--t0);width:56px;text-align:right;flex-shrink:0}
+.hi-acc{font-size:.72rem;color:var(--t2);width:44px;flex-shrink:0}
+.hi-mode{font-size:.65rem;color:var(--t3);flex:1}
+.hi-date{font-size:.62rem;color:var(--t3)}
+.hi-elo{font-size:.68rem;font-family:var(--fh)}
+.hi-elo.pos{color:#4caf50}.hi-elo.neg{color:var(--err)}.hi-elo.neu{color:var(--t3)}
+
+/* LEADERBOARD */
+.lb-tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--s1);border:1px solid var(--b0);border-radius:var(--r2);padding:4px;width:fit-content}
+.lb-tab{background:none;border:none;color:var(--t2);font-family:var(--ff);font-size:.72rem;padding:7px 16px;border-radius:var(--r);cursor:pointer;transition:all .2s;letter-spacing:.04em}
+.lb-tab.on{background:var(--b0);color:var(--t0)}
+.lb-table{width:100%;border-collapse:collapse;margin-bottom:28px}
+.lb-table th{font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);padding:8px 12px;text-align:left;border-bottom:1px solid var(--b0)}
+.lb-table td{padding:11px 12px;border-bottom:1px solid rgba(31,31,31,.6);font-size:.8rem;color:var(--t1);transition:background .15s}
+.lb-table tr:hover td{background:var(--s1)}
+.lb-table tr.you td{background:rgba(255,255,255,.03)}
+.lb-rank{font-family:var(--fh);font-weight:700;color:var(--t0);width:32px}
+.lb-rank.r1{color:var(--elo-gold)}.lb-rank.r2{color:var(--elo-silver)}.lb-rank.r3{color:var(--elo-bronze)}
+.lb-username{color:var(--t0);font-weight:500}
+.lb-wpm{font-family:var(--fh);font-weight:700;color:var(--t0)}
+.lb-elo-badge{display:inline-flex;align-items:center;gap:5px;font-size:.65rem;padding:3px 8px;border-radius:5px}
+.lb-elo-badge.iron{background:rgba(100,100,100,.1);color:#888}
+.lb-elo-badge.bronze{background:rgba(176,125,82,.1);color:var(--elo-bronze)}
+.lb-elo-badge.silver{background:rgba(158,163,174,.1);color:var(--elo-silver)}
+.lb-elo-badge.gold{background:rgba(212,168,67,.1);color:var(--elo-gold)}
+.lb-elo-badge.diamond{background:rgba(100,200,255,.08);color:#64c8ff}
+.lb-elo-badge.master{background:rgba(180,100,255,.08);color:#b464ff}
+
+/* NOTIFICATIONS */
+.notif-stack{position:fixed;top:16px;right:16px;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.notif{background:var(--s0);border:1px solid var(--b1);border-radius:var(--r);padding:12px 16px;font-size:.76rem;color:var(--t1);display:flex;align-items:center;gap:8px;max-width:280px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:notifIn .3s ease both;pointer-events:all}
+.notif.out{animation:notifOut .3s ease both}
+@keyframes notifIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes notifOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(20px)}}
+.notif-icon{font-size:.9rem;flex-shrink:0}
+.notif.ok .notif-icon::before{content:'✓';color:#4caf50}
+.notif.err .notif-icon::before{content:'✗';color:var(--err)}
+.notif.info .notif-icon::before{content:'◆';color:var(--t1)}
+
+/* RACE PAGE */
+.race-lobby{text-align:center;padding:40px 0;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+.race-room{display:none;flex-direction:column;gap:16px}
+.race-room.active{display:flex}
+.race-players{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.rp-item{background:var(--s1);border:1px solid var(--b0);border-radius:var(--r);padding:10px 14px;display:flex;align-items:center;gap:12px}
+.rp-name{font-size:.8rem;color:var(--t0);flex:1}
+.rp-wpm{font-family:var(--fh);font-size:.9rem;font-weight:700;color:var(--t1);width:50px;text-align:right}
+.rp-bar-track{flex:2;height:4px;background:var(--b0);border-radius:2px;overflow:hidden}
+.rp-bar{height:100%;background:var(--t1);border-radius:2px;transition:width .5s ease}
+.rp-bar.you{background:var(--t0)}
+.rp-ready{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:4px}
+.rp-ready.yes{color:#4caf50;background:rgba(76,175,80,.1);border:1px solid rgba(76,175,80,.2)}
+.rp-ready.no{color:var(--t3);background:var(--b0)}
+.race-countdown{font-family:var(--fh);font-size:3rem;font-weight:900;color:var(--t0);text-align:center;display:none}
+@keyframes countPop{0%{transform:scale(1.4)}100%{transform:scale(1)}}
+.race-countdown.pop{animation:countPop .3s ease}
+
+@media(max-width:640px){
+  .topbar{padding:14px 0 12px}
+  .logo{font-size:.85rem}
+  .nav-btn{font-size:.65rem;padding:6px 10px}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .profile-grid{grid-template-columns:repeat(2,1fr)}
+  .result-grid{grid-template-columns:repeat(3,1fr)}
+  .modal{padding:30px 22px}
+  .result-wpm{font-size:3.8rem}
+  #words-display{font-size:1.05rem}.words-wrap{height:calc(1.05rem * 1.9 * 3)!important}
+  .typer-box{padding:22px 20px}
+  .lb-table td,.lb-table th{padding:9px 8px;font-size:.72rem}
+  .auth-card{padding:30px 22px}
+  .theme-grid{grid-template-columns:repeat(2,1fr)}
+  .sound-grid{grid-template-columns:repeat(2,1fr)}
+  .settings-modal{padding:24px 20px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo" onclick="showPage('typing')">
+    <span class="logo-dot"></span>TypeFlow
+  </div>
+  <nav class="topbar-nav" id="topbar-nav">
+    <button class="nav-btn active" onclick="showPage('typing')" data-page="typing">Печать</button>
+    <button class="nav-btn" onclick="showPage('race')" data-page="race">Гонка</button>
+    <button class="nav-btn" onclick="showPage('leaderboard')" data-page="leaderboard">Рейтинг</button>
+    <span id="auth-nav"></span>
+  </nav>
+</header>
+
+<!-- ═══════════ TYPING PAGE ═══════════ -->
+<div class="page active" id="page-typing">
+  <div class="settings-strip">
+    <div class="pill-group">
+      <span class="pill-label">режим</span>
+      <button class="pill on" onclick="setMode('time',this)" data-mode="time">время</button>
+      <button class="pill" onclick="setMode('words',this)" data-mode="words">слова</button>
+    </div>
+    <div class="divider-v"></div>
+    <div class="pill-group" id="opt-time">
+      <button class="pill" onclick="setTime(15,this)">15</button>
+      <button class="pill on" onclick="setTime(30,this)">30</button>
+      <button class="pill" onclick="setTime(60,this)">60</button>
+      <button class="pill" onclick="setTime(120,this)">120</button>
+    </div>
+    <div class="pill-group" id="opt-words" style="display:none">
+      <button class="pill" onclick="setWC(10,this)">10</button>
+      <button class="pill on" onclick="setWC(25,this)">25</button>
+      <button class="pill" onclick="setWC(50,this)">50</button>
+      <button class="pill" onclick="setWC(100,this)">100</button>
+    </div>
+    <div class="divider-v"></div>
+    <div class="pill-group">
+      <button class="pill on" onclick="setLang('ru',this)" data-lang="ru">RU</button>
+      <button class="pill" onclick="setLang('en',this)" data-lang="en">EN</button>
+    </div>
+    <div class="divider-v"></div>
+    <div class="pill-group">
+      <span class="pill-label">пунктуация</span>
+      <button class="pill" id="pill-punct" onclick="togglePunct(this)">выкл</button>
+    </div>
+    <div class="pill-group">
+      <span class="pill-label">цифры</span>
+      <button class="pill" id="pill-nums" onclick="toggleNums(this)">выкл</button>
+    </div>
+    <button class="settings-btn" onclick="openSettings()">⚙ Настройки</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-box"><span class="lbl">WPM</span><span class="val" id="live-wpm">—</span></div>
+    <div class="stat-box"><span class="lbl">Точность</span><span class="val" id="live-acc">—</span><span class="unit">%</span></div>
+    <div class="stat-box"><span class="lbl">Время</span><span class="val" id="live-time">30</span><span class="unit">сек</span></div>
+    <div class="stat-box"><span class="lbl">Ошибок</span><span class="val" id="live-err">0</span></div>
+  </div>
+
+  <div class="pbar-wrap"><div class="pbar" id="pbar"></div></div>
+
+  <div class="typer-box" id="typer-box" onclick="focusInp()">
+    <div class="words-wrap"><div id="words-display"></div></div>
+    <input id="hidden-inp" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <div class="start-hint" id="start-hint">нажми чтобы начать</div>
+  </div>
+
+  <div class="ctrl-row">
+    <button class="btn-restart" onclick="restartTest()">
+      <span class="ico-spin">↺</span> Заново
+    </button>
+    <span style="color:var(--t3);font-size:.68rem"><kbd>Tab</kbd> + <kbd>Enter</kbd></span>
+  </div>
+</div>
+
+<!-- ═══════════ AUTH PAGE ═══════════ -->
+<div class="page" id="page-auth">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div id="auth-mode-reg">
+        <div class="auth-title">Создать аккаунт</div>
+        <div class="auth-sub">Сохраняй результаты и соревнуйся с другими</div>
+        <div class="auth-error" id="reg-error"></div>
+        <div class="field"><label>Имя пользователя</label><input id="reg-username" placeholder="typemaster99" maxlength="20"></div>
+        <div class="field"><label>Email</label><input id="reg-email" type="email" placeholder="you@example.com"></div>
+        <div class="field"><label>Пароль</label><input id="reg-pass" type="password" placeholder="••••••••"></div>
+        <button class="auth-btn" onclick="doRegister()">Зарегистрироваться</button>
+        <div class="auth-switch">Уже есть аккаунт? <a onclick="switchAuth('login')">Войти</a></div>
+      </div>
+      <div id="auth-mode-login" style="display:none">
+        <div class="auth-title">Добро пожаловать</div>
+        <div class="auth-sub">Войди в свой аккаунт</div>
+        <div class="auth-error" id="login-error"></div>
+        <div class="field"><label>Имя пользователя</label><input id="login-username" placeholder="typemaster99"></div>
+        <div class="field"><label>Пароль</label><input id="login-pass" type="password" placeholder="••••••••"></div>
+        <button class="auth-btn" onclick="doLogin()">Войти</button>
+        <div class="auth-switch">Нет аккаунта? <a onclick="switchAuth('register')">Создать</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PROFILE PAGE ═══════════ -->
+<div class="page" id="page-profile">
+  <!-- Coming Soon Banner -->
+  <div class="coming-soon-wrap">
+    <span class="cs-icon">👤</span>
+    <div class="cs-badge">Скоро</div>
+    <div class="cs-title">Профиль</div>
+    <div class="cs-sub">Личная статистика, история тестов, ELO рейтинг и достижения — всё в одном месте</div>
+    <div class="cs-features">
+      <div class="cs-feat">
+        <span class="cs-feat-icon">📈</span>
+        <div class="cs-feat-text"><strong>График прогресса</strong>Визуализация твоего роста по WPM за всё время</div>
+      </div>
+      <div class="cs-feat">
+        <span class="cs-feat-icon">🏆</span>
+        <div class="cs-feat-text"><strong>Достижения</strong>Более 30 уникальных наград за скорость и точность</div>
+      </div>
+      <div class="cs-feat">
+        <span class="cs-feat-icon">🔗</span>
+        <div class="cs-feat-text"><strong>Публичный профиль</strong>Делись своей страницей с другими игроками</div>
+      </div>
+    </div>
+    <div class="cs-notify-row">
+      <input class="cs-notify-inp" placeholder="твой email для уведомления" id="notif-email-profile">
+      <button class="cs-notify-btn" onclick="subscribeNotify('notif-email-profile')">Уведомить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ RACE PAGE ═══════════ -->
+<div class="page" id="page-race">
+  <div class="coming-soon-wrap">
+    <span class="cs-icon">🏎️</span>
+    <div class="cs-badge">Скоро</div>
+    <div class="cs-title">Гонка</div>
+    <div class="cs-sub">Соревнуйся с реальными игроками в режиме реального времени — кто быстрее напечатает текст</div>
+    <div class="cs-features">
+      <div class="cs-feat">
+        <span class="cs-feat-icon">⚡</span>
+        <div class="cs-feat-text"><strong>Real-time мультиплеер</strong>До 8 игроков в одной комнате через WebSockets</div>
+      </div>
+      <div class="cs-feat">
+        <span class="cs-feat-icon">🎮</span>
+        <div class="cs-feat-text"><strong>Приватные комнаты</strong>Создай комнату и позови друзей по коду</div>
+      </div>
+      <div class="cs-feat">
+        <span class="cs-feat-icon">📊</span>
+        <div class="cs-feat-text"><strong>ELO за гонки</strong>Рейтинг отдельно для гоночного режима</div>
+      </div>
+    </div>
+    <div class="cs-notify-row">
+      <input class="cs-notify-inp" placeholder="твой email для уведомления" id="notif-email-race">
+      <button class="cs-notify-btn" onclick="subscribeNotify('notif-email-race')">Уведомить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ LEADERBOARD PAGE ═══════════ -->
+<div class="page" id="page-leaderboard">
+  <div class="coming-soon-wrap">
+    <span class="cs-icon">🏅</span>
+    <div class="cs-badge">Скоро</div>
+    <div class="cs-title">Рейтинг</div>
+    <div class="cs-sub">Глобальная таблица лидеров с реальными игроками, фильтрами и сезонными чартами</div>
+    <div class="cs-features">
+      <div class="cs-feat">
+        <span class="cs-feat-icon">🌍</span>
+        <div class="cs-feat-text"><strong>Глобальный рейтинг</strong>Сравни себя с тысячами игроков по всему миру</div>
+      </div>
+      <div class="cs-feat">
+        <span class="cs-feat-icon">🗓️</span>
+        <div class="cs-feat-text"><strong>Сезонные чарты</strong>Ежемесячные топы с наградами для лидеров</div>
+      </div>
+      <div class="cs-feat">
+        <span class="cs-feat-icon">🏷️</span>
+        <div class="cs-feat-text"><strong>Фильтры по языку</strong>Раздельные рейтинги для RU и EN раскладок</div>
+      </div>
+    </div>
+    <div class="cs-notify-row">
+      <input class="cs-notify-inp" placeholder="твой email для уведомления" id="notif-email-lb">
+      <button class="cs-notify-btn" onclick="subscribeNotify('notif-email-lb')">Уведомить</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<!-- RESULTS MODAL -->
+<div class="overlay" id="results-overlay">
+  <div class="modal" style="max-width:660px">
+    <div class="modal-title">Результат</div>
+    <div class="result-badge" id="res-rank">Новичок</div>
+    <div class="result-wpm" id="res-wpm">0</div>
+    <div class="result-sub">слов в минуту</div>
+    <div class="result-grid">
+      <div class="rg-item"><div class="rg-lbl">Точность</div><div class="rg-val" id="res-acc">0%</div></div>
+      <div class="rg-item"><div class="rg-lbl">Символов</div><div class="rg-val" id="res-chars">0</div></div>
+      <div class="rg-item"><div class="rg-lbl">Ошибок</div><div class="rg-val" id="res-errors">0</div></div>
+    </div>
+    <div class="elo-change" id="res-elo-change" style="display:none">ELO: <span id="res-elo-delta"></span></div>
+
+    <!-- HEATMAP -->
+    <div id="heatmap-section" style="margin-bottom:24px">
+      <div style="font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:var(--t3);margin-bottom:12px;display:flex;align-items:center;gap:10px">
+        Тепловая карта клавиатуры
+        <span style="flex:1;height:1px;background:var(--b0);display:block"></span>
+        <span style="font-size:.58rem;color:var(--t3);letter-spacing:.06em;text-transform:none">красный = медленно / ошибки</span>
+      </div>
+      <div id="heatmap-kb" style="width:100%;overflow-x:auto"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-prim" onclick="restartFromModal()">Ещё раз</button>
+      <button class="btn-sec" id="btn-share" onclick="openShareCard()">🔗 Поделиться</button>
+      <button class="btn-sec" onclick="closeModal()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE CARD OVERLAY -->
+<div class="overlay" id="share-overlay" style="z-index:600">
+  <div class="modal" style="max-width:480px;padding:32px 36px">
+    <div class="modal-title">Карточка результата</div>
+    <!-- The visual card -->
+    <div id="share-card" style="
+      background:linear-gradient(135deg,#0e0e0e 0%,#141414 50%,#0a0a0a 100%);
+      border:1px solid #2a2a2a;
+      border-radius:20px;
+      padding:28px 28px 22px;
+      margin-bottom:16px;
+      position:relative;
+      overflow:hidden;
+    ">
+      <!-- Decorative grid lines -->
+      <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:32px 32px;pointer-events:none"></div>
+      <!-- Top row -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;position:relative">
+        <div>
+          <div style="font-family:'Unbounded',sans-serif;font-size:.65rem;font-weight:900;color:#555;letter-spacing:.08em;margin-bottom:4px">TYPEFLOW</div>
+          <div id="sc-mode-label" style="font-size:.6rem;color:#444;letter-spacing:.1em;text-transform:uppercase">30 сек · RU</div>
+        </div>
+        <div id="sc-rank-badge" style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:8px;padding:5px 12px;font-size:.6rem;color:#666;letter-spacing:.1em;text-transform:uppercase">Новичок</div>
+      </div>
+      <!-- WPM big -->
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px;position:relative">
+        <div id="sc-wpm" style="font-family:'Unbounded',sans-serif;font-size:4.5rem;font-weight:900;color:#f8f8f8;line-height:1;letter-spacing:-.04em">0</div>
+        <div style="font-size:.72rem;color:#555;letter-spacing:.1em;text-transform:uppercase;padding-bottom:4px">WPM</div>
+      </div>
+      <!-- Stats row -->
+      <div style="display:flex;gap:20px;margin-bottom:20px;position:relative">
+        <div>
+          <div style="font-size:.55rem;color:#444;letter-spacing:.14em;text-transform:uppercase;margin-bottom:2px">Точность</div>
+          <div id="sc-acc" style="font-family:'Unbounded',sans-serif;font-size:1rem;font-weight:700;color:#aaa">0%</div>
+        </div>
+        <div>
+          <div style="font-size:.55rem;color:#444;letter-spacing:.14em;text-transform:uppercase;margin-bottom:2px">Символов</div>
+          <div id="sc-chars" style="font-family:'Unbounded',sans-serif;font-size:1rem;font-weight:700;color:#aaa">0</div>
+        </div>
+        <div>
+          <div style="font-size:.55rem;color:#444;letter-spacing:.14em;text-transform:uppercase;margin-bottom:2px">Ошибок</div>
+          <div id="sc-errors" style="font-family:'Unbounded',sans-serif;font-size:1rem;font-weight:700;color:#aaa">0</div>
+        </div>
+        <div id="sc-elo-wrap" style="display:none">
+          <div style="font-size:.55rem;color:#444;letter-spacing:.14em;text-transform:uppercase;margin-bottom:2px">ELO</div>
+          <div id="sc-elo" style="font-family:'Unbounded',sans-serif;font-size:1rem;font-weight:700;color:#4caf50">+0</div>
+        </div>
+      </div>
+      <!-- Mini heatmap bar -->
+      <div id="sc-heatbar" style="display:flex;gap:2px;flex-wrap:wrap;margin-bottom:16px;position:relative"></div>
+      <!-- Bottom -->
+      <div style="display:flex;align-items:center;justify-content:space-between;position:relative">
+        <div id="sc-date" style="font-size:.58rem;color:#333;letter-spacing:.06em"></div>
+        <div style="font-size:.58rem;color:#2a2a2a;letter-spacing:.1em;text-transform:uppercase;font-family:'Unbounded',sans-serif">typeflow.app</div>
+      </div>
+    </div>
+
+    <div style="font-size:.68rem;color:var(--t3);text-align:center;margin-bottom:16px">Сделай скриншот и поделись с друзьями!</div>
+    <div class="modal-actions">
+      <button class="btn-prim" onclick="copyShareText()">📋 Скопировать текст</button>
+      <button class="btn-sec" onclick="closeShareCard()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="settings-overlay" id="settings-overlay" onclick="closeSettingsOutside(event)">
+  <div class="settings-modal">
+    <div class="settings-modal-header">
+      <div class="settings-modal-title">⚙ Настройки</div>
+      <button class="settings-close" onclick="closeSettings()">✕</button>
+    </div>
+
+    <!-- THEME -->
+    <div class="settings-section">
+      <div class="settings-section-title">Тема</div>
+      <div class="theme-grid">
+        <button class="theme-card active" data-theme="dark" onclick="setTheme('dark',this)">
+          <div class="tc-preview" style="background:#0e0e0e">
+            <span class="tc-dot" style="background:#1f1f1f"></span>
+            <span class="tc-dot" style="background:#f8f8f8"></span>
+            <span class="tc-dot" style="background:#666"></span>
+          </div>
+          <div class="tc-name">Тёмная</div>
+        </button>
+        <button class="theme-card" data-theme="light" onclick="setTheme('light',this)">
+          <div class="tc-preview" style="background:#e8e8e4">
+            <span class="tc-dot" style="background:#c8c8c4"></span>
+            <span class="tc-dot" style="background:#1a1a1a"></span>
+            <span class="tc-dot" style="background:#777"></span>
+          </div>
+          <div class="tc-name">Светлая</div>
+        </button>
+        <button class="theme-card" data-theme="sepia" onclick="setTheme('sepia',this)">
+          <div class="tc-preview" style="background:#201a12">
+            <span class="tc-dot" style="background:#3a3020"></span>
+            <span class="tc-dot" style="background:#f0d890"></span>
+            <span class="tc-dot" style="background:#8a7040"></span>
+          </div>
+          <div class="tc-name">Сепия</div>
+        </button>
+        <button class="theme-card" data-theme="blue" onclick="setTheme('blue',this)">
+          <div class="tc-preview" style="background:#080c14">
+            <span class="tc-dot" style="background:#1a2840"></span>
+            <span class="tc-dot" style="background:#a8d0ff"></span>
+            <span class="tc-dot" style="background:#3a5a88"></span>
+          </div>
+          <div class="tc-name">Синяя</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- SOUND -->
+    <div class="settings-section">
+      <div class="settings-section-title">Звук печати</div>
+      <div class="sound-grid">
+        <button class="sound-card active" data-sound="off" onclick="setSound('off',this)">
+          <span class="sc-icon">🔇</span>
+          <span class="sc-name">Выкл</span>
+          <span class="sc-desc">без звука</span>
+        </button>
+        <button class="sound-card" data-sound="click" onclick="setSound('click',this)">
+          <button class="sc-play" onclick="previewSound('click',event)" title="Прослушать">▶</button>
+          <span class="sc-icon">⌨️</span>
+          <span class="sc-name">Механика</span>
+          <span class="sc-desc">механич. клавиши</span>
+        </button>
+        <button class="sound-card" data-sound="soft" onclick="setSound('soft',this)">
+          <button class="sc-play" onclick="previewSound('soft',event)" title="Прослушать">▶</button>
+          <span class="sc-icon">🌊</span>
+          <span class="sc-name">Мягкие</span>
+          <span class="sc-desc">тихие клики</span>
+        </button>
+        <button class="sound-card" data-sound="typewriter" onclick="setSound('typewriter',this)">
+          <button class="sc-play" onclick="previewSound('typewriter',event)" title="Прослушать">▶</button>
+          <span class="sc-icon">📜</span>
+          <span class="sc-name">Машинка</span>
+          <span class="sc-desc">ретро стиль</span>
+        </button>
+        <button class="sound-card" data-sound="pop" onclick="setSound('pop',this)">
+          <button class="sc-play" onclick="previewSound('pop',event)" title="Прослушать">▶</button>
+          <span class="sc-icon">🫧</span>
+          <span class="sc-name">Пузыри</span>
+          <span class="sc-desc">пузыри пузыри</span>
+        </button>
+        <button class="sound-card" data-sound="piano" onclick="setSound('piano',this)">
+          <button class="sc-play" onclick="previewSound('piano',event)" title="Прослушать">▶</button>
+          <span class="sc-icon">🎹</span>
+          <span class="sc-name">Пианино</span>
+          <span class="sc-desc">музыкальные ноты</span>
+        </button>
+      </div>
+      <!-- Volume -->
+      <div class="vol-row">
+        <span class="vol-label">Громкость</span>
+        <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="60" oninput="setVolume(this.value)">
+        <span class="vol-val" id="vol-val">60</span>
+      </div>
+    </div>
+
+    <!-- TOGGLES -->
+    <div class="settings-section">
+      <div class="settings-section-title">Дополнительно</div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-name">Звук ошибки</div>
+          <div class="toggle-desc">Отдельный звук при неправильном символе</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-error-sound" checked onchange="saveSettings()">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-name">Плавный скролл текста</div>
+          <div class="toggle-desc">Анимация при переходе на следующую строку</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-smooth-scroll" checked onchange="saveSettings()">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-name">Показывать WPM во время теста</div>
+          <div class="toggle-desc">Обновляется каждую секунду</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-live-wpm" checked onchange="saveSettings()">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIF STACK -->
+<div class="notif-stack" id="notif-stack"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  WORD BANKS — expanded for more text
+// ══════════════════════════════════════════════
+const WB = {
+  ru:["время","сказать","можно","такой","теперь","только","очень","после","когда","самый","через","всегда","никогда","сразу","потом","снова","место","работа","жизнь","дорога","вопрос","ответ","слово","мысль","взгляд","голос","рука","лицо","глаза","сердце","чувство","история","люди","ночь","день","утро","вечер","новый","старый","большой","малый","хороший","первый","последний","каждый","другой","важный","нужный","сильный","тихий","быстрый","медленный","высокий","долгий","чистый","белый","чёрный","далёкий","близкий","прийти","идти","знать","думать","видеть","слышать","помнить","понять","писать","читать","найти","открыть","начать","любить","ждать","жить","сделать","взять","дать","стоять","говорить","смотреть","слушать","играть","учиться","решить","строить","создать","книга","стол","дверь","окно","дом","город","небо","земля","море","лес","гора","река","звук","свет","тень","ветер","дождь","снег","камень","вода","огонь","воздух","путь","мир","конец","начало","часть","место","сила","власть","право","дело","цель","план","шаг","ход","движение","результат","смысл","причина","закон","порядок","время","момент","сезон","весна","лето","осень","зима","север","юг","запад","восток","улица","парк","двор","садик","школа","класс","урок","знание","наука","техника","машина","поезд","самолёт","корабль","телефон","экран","память","слух","зрение","вкус","запах","цвет","форма","размер","число","буква","текст","фраза","песня","музыка","танец","картина","фото","кино","игра","спорт","бег","прыжок","победа","поражение","команда","друг","семья","мама","папа","брат","сестра","ребёнок","человек","общество","страна","мечта","надежда","вера","любовь","счастье","радость","грусть","смех","слёзы","улыбка","взгляд"],
+  en:["the","be","to","of","and","in","that","have","it","for","not","on","with","he","as","you","do","at","this","but","his","by","from","they","we","say","her","she","or","will","my","one","all","would","there","their","what","so","up","out","if","about","who","get","which","go","me","when","make","can","like","time","no","just","him","know","take","people","into","year","good","some","could","them","see","than","then","now","look","only","come","over","think","also","back","after","use","how","work","well","way","even","new","want","because","give","day","most","great","between","need","large","often","hand","high","place","real","life","seem","together","next","white","begin","walk","paper","group","always","music","those","both","book","letter","mile","river","car","feet","care","plain","girl","ready","above","ever","red","list","feel","talk","bird","soon","body","dog","move","form","page","state","keep","eye","never","last","let","thought","city","tree","farm","hard","start","might","story","far","sea","draw","left","late","run","lead","pick","cut","short","lost","color","window","plant","climb","continue","watch","light","voice","power","earth","world","still","learn","plant","cover","food","sun","four","between","color","city","tree","cross","since","hard","start","might","story","saw","far","sea","draw","left","late","run","mountain","ground","hundred","example","around","father","learn","plant","cover","food","four","hold","morning","something","travel","interest","close","seem","open","together","next","white","children","until","without","second","later","change","off","child","few","north","open","seem","together","next","white","children","side","foot","care","low","simple","open","seem","help","reach","simple","several","order","example","around","learn","plant","cover","food"]
+};
+const PUNCT=[',','.',';',':','!','?'];
+const NUMS=['0','1','2','3','4','5','6','7','8','9'];
+
+// ══════════════════════════════════════════════
+//  HEATMAP DATA
+// ══════════════════════════════════════════════
+let keyStats = {};
+function resetKeyStats(){ keyStats = {}; }
+function recordKeyPress(key, isError){
+  const k = key.toLowerCase();
+  if(!keyStats[k]) keyStats[k] = {hits:0, errors:0, totalMs:0, lastPressTime:0};
+  const now = Date.now();
+  if(keyStats[k].lastPressTime > 0){
+    const delta = now - keyStats[k].lastPressTime;
+    if(delta < 3000) keyStats[k].totalMs += delta;
+  }
+  keyStats[k].lastPressTime = now;
+  keyStats[k].hits++;
+  if(isError) keyStats[k].errors++;
+}
+const KB_ROWS_EN = [
+  ['`','1','2','3','4','5','6','7','8','9','0','-','='],
+  ['q','w','e','r','t','y','u','i','o','p','[',']','\\'],
+  ['a','s','d','f','g','h','j','k','l',';',"'"],
+  ['z','x','c','v','b','n','m',',','.','/'],
+];
+const KB_ROWS_RU = [
+  ['ё','1','2','3','4','5','6','7','8','9','0','-','='],
+  ['й','ц','у','к','е','н','г','ш','щ','з','х','ъ'],
+  ['ф','ы','в','а','п','р','о','л','д','ж','э'],
+  ['я','ч','с','м','и','т','ь','б','ю','.'],
+];
+function getHeatColor(key, maxScore){
+  const s = keyStats[key.toLowerCase()] || {hits:0, errors:0, totalMs:0};
+  if(s.hits === 0) return {fill:'#111', stroke:'#1e1e1e', text:'#333', hits:0};
+  const errRate = s.errors / s.hits;
+  const avgMs = s.totalMs / s.hits;
+  const score = errRate * 60 + Math.min(avgMs / 25, 40);
+  const t = Math.min(score / Math.max(maxScore, 10), 1);
+  let fill, stroke, text;
+  if(t < 0.3){
+    const r = t/0.3;
+    fill = `rgb(${Math.round(20+r*15)},${Math.round(44+r*12)},${Math.round(20+r*6)})`;
+    stroke = '#2a5a2a';
+    text = `rgb(${Math.round(90+r*80)},${Math.round(180+r*40)},${Math.round(90+r*30)})`;
+  } else if(t < 0.65){
+    const r = (t-0.3)/0.35;
+    fill = `rgb(${Math.round(44+r*24)},${Math.round(30+r*10)},10)`;
+    stroke = `rgb(${Math.round(90+r*50)},${Math.round(60+r*20)},20)`;
+    text = `rgb(${Math.round(210+r*35)},${Math.round(160+r*36)},${Math.round(70-r*30)})`;
+  } else {
+    const r = (t-0.65)/0.35;
+    fill = `rgb(${Math.round(60+r*20)},14,14)`;
+    stroke = `rgb(${Math.round(150+r*80)},28,28)`;
+    text = `rgb(${Math.round(200+r*55)},${Math.round(80+r*20)},${Math.round(80+r*20)})`;
+  }
+  return {fill, stroke, text, hits:s.hits, errors:s.errors, avgMs:Math.round(avgMs)};
+}
+function getMaxScore(){
+  let m = 0;
+  Object.values(keyStats).forEach(s => {
+    const score = (s.errors/Math.max(s.hits,1))*60 + Math.min((s.totalMs/Math.max(s.hits,1))/25,40);
+    if(score>m) m=score;
+  });
+  return Math.max(m, 10);
+}
+function renderHeatmap(containerId, lang){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const rows = lang === 'ru' ? KB_ROWS_RU : KB_ROWS_EN;
+  const keyW=38, keyH=36, gap=5;
+  const maxScore = getMaxScore();
+  const totalW = 520;
+  const totalH = rows.length*(keyH+gap)+32;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" style="width:100%;max-width:${totalW}px;display:block;font-family:JetBrains Mono,monospace">`;
+  rows.forEach((row, ri)=>{
+    const offsets = [0, 18, 28, 42];
+    const xOff = offsets[ri]||0;
+    row.forEach((key, ki)=>{
+      const x = xOff + ki*(keyW+gap);
+      const y = ri*(keyH+gap)+2;
+      const c = getHeatColor(key, maxScore);
+      const hint = c.hits>0 ? `${key}: ${c.hits} нажатий, ${c.errors} ошибок, ${c.avgMs}мс` : key;
+      svg += `<g><title>${hint}</title>`;
+      svg += `<rect x="${x}" y="${y}" width="${keyW}" height="${keyH}" rx="7" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.2"/>`;
+      svg += `<text x="${x+keyW/2}" y="${y+keyH/2+4.5}" text-anchor="middle" font-size="11.5" fill="${c.text}">${key}</text>`;
+      svg += `</g>`;
+    });
+  });
+  // Space bar
+  const spaceY = rows.length*(keyH+gap)+2;
+  const spaceC = getHeatColor(' ', maxScore);
+  svg += `<rect x="80" y="${spaceY - keyH - gap}" width="280" height="${keyH}" rx="7" fill="${spaceC.fill}" stroke="${spaceC.stroke}" stroke-width="1.2"/>`;
+  svg += `<text x="220" y="${spaceY - keyH/2 - gap + 5}" text-anchor="middle" font-size="10" fill="${spaceC.text}">ПРОБЕЛ</text>`;
+  // Legend
+  const legendY = totalH - 16;
+  svg += `<text x="0" y="${legendY}" font-size="9" fill="#3a3a3a">быстро</text>`;
+  for(let i=0;i<14;i++){
+    const t=i/13;
+    let bg;
+    if(t<0.3){const r=t/0.3;bg=`rgb(${Math.round(20+r*15)},${Math.round(44+r*12)},${Math.round(20+r*6)})`;}
+    else if(t<0.65){const r=(t-.3)/.35;bg=`rgb(${Math.round(44+r*24)},${Math.round(30+r*10)},10)`;}
+    else{const r=(t-.65)/.35;bg=`rgb(${Math.round(60+r*20)},14,14)`;}
+    svg += `<rect x="${52+i*15}" y="${legendY-11}" width="14" height="10" rx="2" fill="${bg}"/>`;
+  }
+  svg += `<text x="${52+14*15+4}" y="${legendY}" font-size="9" fill="#3a3a3a">медленно / ошибки</text>`;
+  svg += `</svg>`;
+  el.innerHTML = svg;
+}
+function renderMiniHeatBar(containerId, lang){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const rows = lang==='ru' ? KB_ROWS_RU : KB_ROWS_EN;
+  const allKeys = rows.flat();
+  const maxScore = getMaxScore();
+  let html = '';
+  allKeys.forEach(k=>{
+    const c = getHeatColor(k, maxScore);
+    html += `<div style="width:10px;height:10px;border-radius:2px;background:${c.fill};flex-shrink:0" title="${k}"></div>`;
+  });
+  el.innerHTML = html;
+  el.style.cssText += ';display:flex;flex-wrap:wrap;gap:2px';
+}
+
+// ══════════════════════════════════════════════
+//  SETTINGS STATE
+// ══════════════════════════════════════════════
+let Settings = {
+  theme: 'dark',
+  sound: 'off',
+  volume: 60,
+  errorSound: true,
+  smoothScroll: true,
+  liveWpm: true,
+};
+
+function loadSettings(){
+  try {
+    const s = JSON.parse(localStorage.getItem('tf_settings')||'{}');
+    Object.assign(Settings, s);
+  } catch(e){}
+  applyTheme(Settings.theme);
+  document.getElementById('vol-slider').value = Settings.volume;
+  document.getElementById('vol-val').textContent = Settings.volume;
+  document.getElementById('toggle-error-sound').checked = Settings.errorSound;
+  document.getElementById('toggle-smooth-scroll').checked = Settings.smoothScroll;
+  document.getElementById('toggle-live-wpm').checked = Settings.liveWpm;
+  // Mark active theme card
+  document.querySelectorAll('.theme-card').forEach(c => c.classList.toggle('active', c.dataset.theme === Settings.theme));
+  // Mark active sound card
+  document.querySelectorAll('.sound-card').forEach(c => c.classList.toggle('active', c.dataset.sound === Settings.sound));
+}
+
+function saveSettings(){
+  Settings.errorSound = document.getElementById('toggle-error-sound').checked;
+  Settings.smoothScroll = document.getElementById('toggle-smooth-scroll').checked;
+  Settings.liveWpm = document.getElementById('toggle-live-wpm').checked;
+  localStorage.setItem('tf_settings', JSON.stringify(Settings));
+}
+
+function setTheme(theme, el){
+  Settings.theme = theme;
+  applyTheme(theme);
+  document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  saveSettings();
+}
+
+function applyTheme(theme){
+  document.body.className = theme === 'dark' ? '' : `theme-${theme}`;
+}
+
+function setSound(sound, el){
+  Settings.sound = sound;
+  document.querySelectorAll('.sound-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  saveSettings();
+  if(sound !== 'off') playKeySound(sound, false);
+}
+
+function setVolume(val){
+  Settings.volume = parseInt(val);
+  document.getElementById('vol-val').textContent = val;
+  saveSettings();
+}
+
+function openSettings(){
+  document.getElementById('settings-overlay').classList.add('show');
+}
+function closeSettings(){
+  document.getElementById('settings-overlay').classList.remove('show');
+}
+function closeSettingsOutside(e){
+  if(e.target === document.getElementById('settings-overlay')) closeSettings();
+}
+
+// ══════════════════════════════════════════════
+//  AUDIO ENGINE
+// ══════════════════════════════════════════════
+let audioCtx = null;
+function getAudioCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+
+const PIANO_NOTES = [261.6, 293.7, 329.6, 349.2, 392.0, 440.0, 493.9, 523.3, 587.3, 659.3, 698.5, 783.9];
+let pianoIdx = 0;
+
+function playKeySound(type, isError){
+  if(Settings.sound === 'off') return;
+  const useType = type || Settings.sound;
+  if(useType === 'off') return;
+  
+  try {
+    const ctx = getAudioCtx();
+    const vol = Settings.volume / 100 * 0.4;
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+
+    if(isError && Settings.errorSound){
+      // Error: low buzz
+      const osc = ctx.createOscillator();
+      osc.connect(gain);
+      osc.frequency.setValueAtTime(120, ctx.currentTime);
+      osc.type = 'sawtooth';
+      gain.gain.setValueAtTime(vol * 0.5, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.08);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.08);
+      return;
+    }
+
+    if(useType === 'click'){
+      // Mechanical click: short sharp noise burst
+      const bufSize = ctx.sampleRate * 0.02;
+      const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for(let i=0;i<bufSize;i++) data[i] = (Math.random()*2-1) * Math.exp(-i/(bufSize*0.1));
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      // Add a short tonal click
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.connect(oscGain); oscGain.connect(gain);
+      osc.frequency.setValueAtTime(1200, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime+0.01);
+      osc.type = 'square';
+      oscGain.gain.setValueAtTime(vol*0.3, ctx.currentTime);
+      oscGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.015);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime+0.015);
+      src.connect(gain);
+      gain.gain.setValueAtTime(vol, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.02);
+      src.start(ctx.currentTime); src.stop(ctx.currentTime+0.02);
+    } else if(useType === 'soft'){
+      // Soft tap
+      const bufSize = ctx.sampleRate * 0.03;
+      const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for(let i=0;i<bufSize;i++) data[i] = (Math.random()*2-1) * Math.exp(-i/(bufSize*0.3));
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(gain);
+      gain.gain.setValueAtTime(vol*0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.03);
+      src.start(ctx.currentTime); src.stop(ctx.currentTime+0.03);
+    } else if(useType === 'typewriter'){
+      // Typewriter: sharp metallic click + carriage sound
+      const osc = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      osc.connect(gain); osc2.connect(gain);
+      osc.type = 'square'; osc2.type = 'square';
+      osc.frequency.setValueAtTime(800+Math.random()*200, ctx.currentTime);
+      osc2.frequency.setValueAtTime(400+Math.random()*100, ctx.currentTime);
+      gain.gain.setValueAtTime(vol*0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.025);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime+0.025);
+      osc2.start(ctx.currentTime); osc2.stop(ctx.currentTime+0.025);
+    } else if(useType === 'pop'){
+      // Pop/bubble sound
+      const osc = ctx.createOscillator();
+      osc.connect(gain);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600+Math.random()*200, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime+0.08);
+      gain.gain.setValueAtTime(vol*0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.08);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime+0.08);
+    } else if(useType === 'piano'){
+      // Piano note
+      const freq = PIANO_NOTES[pianoIdx % PIANO_NOTES.length];
+      pianoIdx++;
+      const osc = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      osc.connect(gain); osc2.connect(gain);
+      osc.type = 'sine'; osc2.type = 'triangle';
+      osc.frequency.value = freq;
+      osc2.frequency.value = freq * 2;
+      gain.gain.setValueAtTime(vol*0.5, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.4);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime+0.4);
+      osc2.start(ctx.currentTime); osc2.stop(ctx.currentTime+0.4);
+    }
+  } catch(e){}
+}
+
+function previewSound(type, e){
+  e.stopPropagation();
+  playKeySound(type, false);
+}
+
+// ══════════════════════════════════════════════
+//  STORAGE / AUTH
+// ══════════════════════════════════════════════
+const DB = {
+  get users(){ try{return JSON.parse(localStorage.getItem('tf_users')||'{}')}catch{return{}} },
+  set users(v){ localStorage.setItem('tf_users',JSON.stringify(v)) },
+  get session(){ return localStorage.getItem('tf_session') },
+  set session(v){ if(v)localStorage.setItem('tf_session',v);else localStorage.removeItem('tf_session') },
+};
+function getUser(u){ return DB.users[u]||null }
+function saveUser(u,data){ const all=DB.users; all[u]=data; DB.users=all }
+function currentUser(){ const s=DB.session; return s?getUser(s):null }
+
+function seedFakeUsers(){
+  const all=DB.users;
+  const fakeNames=['shadowtyper','kira_speed','maxflow','дракон88','kenobi','zara_fast','typequeen','nightcoder','слово','velocityX'];
+  const wpmBases=[145,132,128,119,115,109,98,87,76,64];
+  fakeNames.forEach((name,i)=>{
+    if(!all[name]){
+      const elo=1200-i*50+Math.round(Math.random()*30);
+      all[name]={username:name,password:'fake',email:'fake@fake.com',elo,bestWpm:wpmBases[i]+Math.round(Math.random()*5),avgWpm:wpmBases[i]-8+Math.round(Math.random()*5),tests:Math.round(50+Math.random()*400),wins:Math.round(5+Math.random()*80),accuracy:92+Math.round(Math.random()*6),history:[],joined:new Date(Date.now()-Math.random()*1e10).toISOString(),fake:true};
+    }
+  });
+  DB.users=all;
+}
+seedFakeUsers();
+
+// ══════════════════════════════════════════════
+//  ELO SYSTEM
+// ══════════════════════════════════════════════
+const ELO_RANKS=[
+  {name:'Железо',key:'iron',icon:'⚙',min:0,max:999},
+  {name:'Бронза',key:'bronze',icon:'🥉',min:1000,max:1199},
+  {name:'Серебро',key:'silver',icon:'🥈',min:1200,max:1399},
+  {name:'Золото',key:'gold',icon:'🥇',min:1400,max:1699},
+  {name:'Алмаз',key:'diamond',icon:'💎',min:1700,max:1999},
+  {name:'Мастер',key:'master',icon:'👑',min:2000,max:9999},
+];
+function getEloRank(elo){ return ELO_RANKS.find(r=>elo>=r.min&&elo<=r.max)||ELO_RANKS[0] }
+function calcEloChange(wpm,isRace,won){
+  let delta=0;
+  if(!isRace){
+    if(wpm>=120)delta=18; else if(wpm>=90)delta=12; else if(wpm>=60)delta=7;
+    else if(wpm>=40)delta=3; else if(wpm>=25)delta=1; else delta=-2;
+  } else { delta=won?25:-15; }
+  return delta;
+}
+
+// ══════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════
+let currentPage='typing';
+function showPage(p){
+  if(p==='profile'&&!currentUser()){showPage('auth');return}
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p)?.classList.add('active');
+  document.querySelectorAll('[data-page]').forEach(el=>el.classList.toggle('active',el.dataset.page===p));
+  currentPage=p;
+}
+
+function updateAuthNav(){
+  const u=currentUser();
+  const nav=document.getElementById('auth-nav');
+  if(u){
+    nav.innerHTML=`<button class="avatar-btn" onclick="showPage('profile')" title="${u.username}">${u.username.charAt(0).toUpperCase()}</button>`;
+  } else {
+    nav.innerHTML=`<button class="nav-btn" onclick="showPage('auth')">Войти</button><button class="nav-btn accent" onclick="showPage('auth')">Регистрация</button>`;
+  }
+}
+updateAuthNav();
+
+// ══════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════
+function switchAuth(mode){
+  document.getElementById('auth-mode-reg').style.display=mode==='register'?'':'none';
+  document.getElementById('auth-mode-login').style.display=mode==='login'?'':'none';
+}
+function showAuthError(id,msg){
+  const el=document.getElementById(id);
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),4000);
+}
+function doRegister(){
+  const username=document.getElementById('reg-username').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pass=document.getElementById('reg-pass').value;
+  if(!username||username.length<3){showAuthError('reg-error','Имя должно быть минимум 3 символа');return}
+  if(!/^[a-zA-Zа-яёА-ЯЁ0-9_]+$/.test(username)){showAuthError('reg-error','Только буквы, цифры и _');return}
+  if(!email||!email.includes('@')){showAuthError('reg-error','Введи корректный email');return}
+  if(!pass||pass.length<6){showAuthError('reg-error','Пароль минимум 6 символов');return}
+  if(getUser(username)){showAuthError('reg-error','Это имя уже занято');return}
+  const userData={username,email,password:btoa(pass),elo:800,bestWpm:0,avgWpm:0,tests:0,wins:0,accuracy:0,history:[],joined:new Date().toISOString(),fake:false};
+  saveUser(username,userData);
+  DB.session=username;
+  updateAuthNav();
+  showPage('typing');
+  notify('ok',`Добро пожаловать, ${username}!`);
+}
+function doLogin(){
+  const username=document.getElementById('login-username').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const u=getUser(username);
+  if(!u||u.fake){showAuthError('login-error','Пользователь не найден');return}
+  if(u.password!==btoa(pass)){showAuthError('login-error','Неверный пароль');return}
+  DB.session=username;
+  updateAuthNav();
+  showPage('typing');
+  notify('ok',`С возвращением, ${username}!`);
+}
+function doLogout(){
+  DB.session=null;
+  updateAuthNav();
+  showPage('typing');
+  notify('info','Вы вышли из аккаунта');
+}
+
+// ══════════════════════════════════════════════
+//  TYPING TEST
+// ══════════════════════════════════════════════
+let T={
+  mode:'time',timeLimit:30,wordCount:25,lang:'ru',punct:false,nums:false,
+  words:[],cwi:0,cli:0,typed:[],
+  started:false,done:false,startTime:0,
+  timeLeft:30,timerInt:null,
+  totalKS:0,correctKS:0,errors:0
+};
+
+function buildWords(count){
+  const bank=[...WB[T.lang]];
+  const arr=[];
+  for(let i=0;i<count;i++){
+    let w=bank[Math.floor(Math.random()*bank.length)];
+    if(T.nums&&Math.random()<.12) w=String(Math.round(Math.random()*999));
+    if(T.punct&&Math.random()<.15) w=w+PUNCT[Math.floor(Math.random()*PUNCT.length)];
+    arr.push(w);
+  }
+  return arr;
+}
+
+function initTest(){
+  clearInterval(T.timerInt);
+  resetKeyStats();
+  // Use large pool so text never runs out
+  const needed = T.mode==='words' ? T.wordCount : 200;
+  T.words=buildWords(needed);
+  T.cwi=0;T.cli=0;T.typed=T.words.map(()=>[]);
+  T.started=false;T.done=false;T.startTime=0;
+  T.timeLeft=T.timeLimit;T.totalKS=0;T.correctKS=0;T.errors=0;
+  document.getElementById('live-wpm').textContent='—';
+  document.getElementById('live-acc').textContent='—';
+  document.getElementById('live-time').textContent=T.mode==='time'?T.timeLimit:'—';
+  document.getElementById('live-err').textContent='0';
+  document.getElementById('pbar').style.width='100%';
+  renderWordDisplay('words-display',T.words,T.typed,T.cwi,T.cli);
+  document.getElementById('start-hint').classList.remove('gone');
+  document.getElementById('words-display').classList.add('blur');
+  document.getElementById('hidden-inp').value='';
+}
+
+function renderWordDisplay(displayId,words,typed,cwi,cli){
+  const el=document.getElementById(displayId);
+  if(!el)return;
+  el.innerHTML='';
+  el.style.transform='translateY(0)';
+  words.forEach((word,wi)=>{
+    const wspan=document.createElement('span');
+    wspan.id=`w-${displayId}-${wi}`;
+    wspan.style.display='inline';
+    word.split('').forEach((ch,li)=>{
+      const s=document.createElement('span');
+      s.className='letter';
+      s.id=`c-${displayId}-${wi}-${li}`;
+      const t=typed[wi]?.[li];
+      if(wi<cwi){s.className='letter '+(t===ch?'ok':'bad');}
+      else if(wi===cwi){
+        if(li<cli)s.className='letter '+(t===ch?'ok':'bad');
+        else if(li===cli)s.className='letter cur';
+      }
+      s.textContent=ch;
+      wspan.appendChild(s);
+    });
+    el.appendChild(wspan);
+    if(wi<words.length-1){
+      const sp=document.createElement('span');
+      sp.className='letter';sp.textContent=' ';
+      el.appendChild(sp);
+    }
+  });
+  scrollWordDisplay(displayId,cwi);
+}
+
+function scrollWordDisplay(displayId,cwi){
+  if(!Settings.smoothScroll && displayId==='words-display') return _scrollWordDisplayNow(displayId,cwi);
+  _scrollWordDisplayNow(displayId,cwi);
+}
+
+function _scrollWordDisplayNow(displayId,cwi){
+  const el=document.getElementById(displayId);
+  const wspan=document.getElementById(`w-${displayId}-${cwi}`);
+  if(!el||!wspan)return;
+  const lineH = parseFloat(getComputedStyle(el).lineHeight)||41.8;
+  const top=wspan.offsetTop;
+  // Scroll so current line is always on line 1 (top), keeping previous line visible
+  if(top >= lineH * 0.8){
+    const rows = Math.floor(top / lineH);
+    const offset = Math.max(0, rows - 1) * lineH;
+    el.style.transform=`translateY(-${offset}px)`;
+  } else {
+    el.style.transform='translateY(0)';
+  }
+}
+
+function updateLetterClass(displayId,words,typed,cwi,cli){
+  const word=words[cwi];
+  if(!word)return;
+  word.split('').forEach((ch,li)=>{
+    const s=document.getElementById(`c-${displayId}-${cwi}-${li}`);
+    if(!s)return;
+    const t=typed[cwi]?.[li];
+    if(li<cli){s.className='letter '+(t===ch?'ok':'bad')}
+    else if(li===cli){s.className='letter cur'}
+    else{s.className='letter'}
+  });
+  // Clear stale cursors
+  document.querySelectorAll(`#${displayId} .letter.cur`).forEach(e=>{
+    const idParts=e.id.split('-');
+    const w=parseInt(idParts[2]);const l=parseInt(idParts[3]);
+    if(w!==cwi||l!==cli) e.className='letter';
+  });
+}
+
+function focusInp(){
+  document.getElementById('hidden-inp').focus();
+  document.getElementById('start-hint').classList.add('gone');
+  document.getElementById('words-display').classList.remove('blur');
+}
+
+document.getElementById('hidden-inp').addEventListener('keydown',function(e){
+  if(T.done)return;
+  if(e.key==='Backspace'){e.preventDefault();handleBS();return}
+  if(e.key===' '){e.preventDefault();handleSpace();return}
+  if(e.key.length===1){
+    if(!T.started)startTyping();
+    handleChar(e.key);
+  }
+});
+document.getElementById('hidden-inp').addEventListener('focus',()=>{
+  document.getElementById('start-hint').classList.add('gone');
+  document.getElementById('words-display').classList.remove('blur');
+});
+document.getElementById('hidden-inp').addEventListener('blur',()=>{
+  if(!T.started&&!T.done){
+    document.getElementById('start-hint').classList.remove('gone');
+    document.getElementById('words-display').classList.add('blur');
+  }
+});
+
+function startTyping(){
+  T.started=true;T.startTime=Date.now();
+  if(T.mode==='time'){
+    T.timerInt=setInterval(()=>{
+      T.timeLeft--;
+      document.getElementById('live-time').textContent=T.timeLeft;
+      document.getElementById('pbar').style.width=(T.timeLeft/T.timeLimit*100)+'%';
+      if(Settings.liveWpm) updateLiveStats();
+      if(T.timeLeft<=0){clearInterval(T.timerInt);finishTest();}
+    },1000);
+  }
+}
+
+function handleChar(ch){
+  const word=T.words[T.cwi];if(!word)return;
+  T.totalKS++;
+  const isCorrect = (T.cli < word.length) && ch===word[T.cli];
+  recordKeyPress(ch, !isCorrect);
+  if(T.cli<word.length){
+    T.typed[T.cwi][T.cli]=ch;
+    if(isCorrect) T.correctKS++;
+    else{T.errors++;shakeBox('typer-box');playKeySound(null,true);}
+    T.cli++;
+  } else {
+    T.typed[T.cwi].push(ch);T.errors++;T.cli++;
+    playKeySound(null,true);
+    return;
+  }
+  if(isCorrect) playKeySound(null, false);
+  updateLetterClass('words-display',T.words,T.typed,T.cwi,T.cli);
+  scrollWordDisplay('words-display',T.cwi);
+  if(Settings.liveWpm) updateLiveStats();
+  // Auto-extend words for time mode so text never runs out
+  if(T.mode==='time' && T.cwi >= T.words.length - 20){
+    const more = buildWords(60);
+    T.words.push(...more);
+    T.typed.push(...more.map(()=>[]));
+    renderWordDisplay('words-display',T.words,T.typed,T.cwi,T.cli);
+  }
+  if(T.mode==='words'&&T.cwi>=T.words.length) finishTest();
+}
+
+function handleSpace(){
+  if(T.cli===0)return;
+  playKeySound(null, false);
+  const word=T.words[T.cwi];
+  for(let i=T.cli;i<word.length;i++){
+    const s=document.getElementById(`c-words-display-${T.cwi}-${i}`);
+    if(s&&!s.classList.contains('ok')) s.className='letter bad';
+  }
+  T.cwi++;T.cli=0;
+  if(T.cwi>=T.words.length){if(T.mode==='words')finishTest();return;}
+  scrollWordDisplay('words-display',T.cwi);
+  const s=document.getElementById(`c-words-display-${T.cwi}-0`);
+  if(s) s.className='letter cur';
+  if(Settings.liveWpm) updateLiveStats();
+}
+
+function handleBS(){
+  if(T.cli>0){
+    T.cli--;
+    T.typed[T.cwi][T.cli]=undefined;
+    updateLetterClass('words-display',T.words,T.typed,T.cwi,T.cli);
+  } else if(T.cwi>0){
+    T.cwi--;
+    T.cli=T.typed[T.cwi].filter(x=>x!==undefined).length;
+    updateLetterClass('words-display',T.words,T.typed,T.cwi,T.cli);
+    scrollWordDisplay('words-display',T.cwi);
+  }
+}
+
+function updateLiveStats(){
+  if(!T.startTime)return;
+  const elapsed=(Date.now()-T.startTime)/60000;
+  const cwPrev=countCorrectWords(T.words,T.typed,T.cwi);
+  const wpm=elapsed>0?Math.round(cwPrev/elapsed):0;
+  const acc=T.totalKS>0?Math.round(T.correctKS/T.totalKS*100):100;
+  document.getElementById('live-wpm').textContent=wpm||'—';
+  document.getElementById('live-acc').textContent=T.totalKS>0?acc:'—';
+  document.getElementById('live-err').textContent=T.errors;
+  if(T.mode==='words'){
+    const pct=Math.round(T.cwi/T.wordCount*100);
+    document.getElementById('pbar').style.width=pct+'%';
+    document.getElementById('live-time').textContent=T.cwi+'/'+T.wordCount;
+  }
+}
+
+function countCorrectWords(words,typed,upToIndex){
+  let c=0;
+  for(let i=0;i<upToIndex;i++){
+    const w=words[i];const t=typed[i];
+    if(!t||t.filter(x=>x!==undefined).length!==w.length)continue;
+    if(w.split('').every((ch,li)=>t[li]===ch))c++;
+  }
+  return c;
+}
+
+function finishTest(){
+  if(T.done)return;
+  T.done=true;T.started=false;
+  clearInterval(T.timerInt);
+  const elapsed=T.startTime?(Date.now()-T.startTime)/60000:1;
+  const cw=countCorrectWords(T.words,T.typed,T.cwi);
+  const wpm=elapsed>0?Math.round(cw/elapsed):0;
+  const acc=T.totalKS>0?Math.round(T.correctKS/T.totalKS*100):100;
+
+  let eloDelta=0;
+  const u=currentUser();
+  if(u&&!u.fake){
+    eloDelta=calcEloChange(wpm,false,false);
+    u.elo=Math.max(0,u.elo+eloDelta);
+    u.tests=(u.tests||0)+1;
+    u.bestWpm=Math.max(u.bestWpm||0,wpm);
+    const totalWpm=(u.avgWpm||0)*(u.tests-1)+wpm;
+    u.avgWpm=Math.round(totalWpm/u.tests);
+    u.accuracy=Math.round(((u.accuracy||0)*(u.tests-1)+acc)/u.tests);
+    u.history=u.history||[];
+    u.history.unshift({wpm,acc,errors:T.errors,mode:`${T.mode==='time'?T.timeLimit+'s':T.wordCount+'w'}`,date:new Date().toISOString(),eloDelta});
+    if(u.history.length>50)u.history=u.history.slice(0,50);
+    saveUser(u.username,u);
+  }
+
+  const rank=wpm>=120?'Мастер':wpm>=90?'Профи':wpm>=60?'Продвинутый':wpm>=40?'Средний':wpm>=20?'Новичок':'Начинающий';
+  document.getElementById('res-wpm').textContent=wpm;
+  document.getElementById('res-acc').textContent=acc+'%';
+  document.getElementById('res-chars').textContent=T.totalKS;
+  document.getElementById('res-errors').textContent=T.errors;
+  document.getElementById('res-rank').textContent=rank;
+  document.getElementById('res-rank').className='result-badge'+(wpm>=90?' gold':'');
+  if(u&&!u.fake){
+    const eld=document.getElementById('res-elo-change');
+    eld.style.display='block';
+    const ds=document.getElementById('res-elo-delta');
+    ds.textContent=(eloDelta>=0?'+':'')+eloDelta+' ('+u.elo+' ELO)';
+    ds.className=eloDelta>=0?'elo-pos':'elo-neg';
+  } else {
+    document.getElementById('res-elo-change').style.display='none';
+  }
+
+  // Render heatmap
+  setTimeout(()=>{ renderHeatmap('heatmap-kb', T.lang); }, 100);
+
+  // Populate share card data
+  _lastResult = {wpm, acc, chars:T.totalKS, errors:T.errors, rank, eloDelta, u,
+    mode: T.mode==='time' ? T.timeLimit+'сек' : T.wordCount+' сл',
+    lang: T.lang.toUpperCase()};
+
+  document.getElementById('results-overlay').classList.add('show');
+}
+
+// Share card state
+let _lastResult = {};
+
+function openShareCard(){
+  const r = _lastResult;
+  if(!r.wpm && r.wpm !== 0) return;
+  document.getElementById('sc-wpm').textContent = r.wpm;
+  document.getElementById('sc-acc').textContent = r.acc + '%';
+  document.getElementById('sc-chars').textContent = r.chars;
+  document.getElementById('sc-errors').textContent = r.errors;
+  document.getElementById('sc-rank-badge').textContent = r.rank;
+  document.getElementById('sc-mode-label').textContent = (r.mode||'30сек') + ' · ' + (r.lang||'RU');
+  document.getElementById('sc-date').textContent = new Date().toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric'});
+
+  // ELO in share
+  const eloWrap = document.getElementById('sc-elo-wrap');
+  const eloEl = document.getElementById('sc-elo');
+  if(r.u && !r.u.fake && r.eloDelta !== undefined){
+    eloWrap.style.display = '';
+    eloEl.textContent = (r.eloDelta >= 0 ? '+' : '') + r.eloDelta;
+    eloEl.style.color = r.eloDelta >= 0 ? '#4caf50' : '#ff3b3b';
+  } else {
+    eloWrap.style.display = 'none';
+  }
+
+  // Mini heat bar
+  renderMiniHeatBar('sc-heatbar', _lastResult.lang === 'RU' ? 'ru' : 'en');
+
+  document.getElementById('share-overlay').classList.add('show');
+}
+
+function closeShareCard(){
+  document.getElementById('share-overlay').classList.remove('show');
+}
+
+function copyShareText(){
+  const r = _lastResult;
+  const text = `⌨️ TypeFlow результат\n\n🚀 ${r.wpm} WPM\n🎯 Точность: ${r.acc}%\n❌ Ошибок: ${r.errors}\n📝 Символов: ${r.chars}\n🏆 Уровень: ${r.rank}\n\nПопробуй сам: typeflow.app`;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(()=>notify('ok','Скопировано в буфер!'));
+  } else {
+    notify('info','Скопируй текст вручную');
+  }
+}
+
+function restartFromModal(){
+  document.getElementById('results-overlay').classList.remove('show');
+  setTimeout(()=>{initTest();focusInp();},200);
+}
+function closeModal(){
+  document.getElementById('results-overlay').classList.remove('show');
+  setTimeout(initTest,200);
+}
+function restartTest(){
+  document.getElementById('results-overlay').classList.remove('show');
+  initTest();
+  setTimeout(focusInp,80);
+}
+
+function shakeBox(id){
+  const b=document.getElementById(id);
+  b.classList.remove('shake-it');
+  void b.offsetWidth;
+  b.classList.add('shake-it');
+}
+
+// Keyboard shortcut
+let tabDown=false;
+document.addEventListener('keydown',e=>{
+  if(e.key==='Tab'){e.preventDefault();tabDown=true;}
+  if(e.key==='Enter'&&tabDown){e.preventDefault();restartTest();}
+  if(e.key==='Escape'){closeSettings();}
+});
+document.addEventListener('keyup',e=>{if(e.key==='Tab')tabDown=false;});
+
+// Settings controls
+function setMode(m,el){
+  T.mode=m;
+  document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+  document.getElementById('opt-time').style.display=m==='time'?'flex':'none';
+  document.getElementById('opt-words').style.display=m==='words'?'flex':'none';
+  initTest();
+}
+function setTime(t,el){
+  T.timeLimit=t;T.timeLeft=t;
+  document.querySelectorAll('#opt-time .pill').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');initTest();
+}
+function setWC(n,el){
+  T.wordCount=n;
+  document.querySelectorAll('#opt-words .pill').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');initTest();
+}
+function setLang(l,el){
+  T.lang=l;
+  document.querySelectorAll('[data-lang]').forEach(b=>b.classList.toggle('on',b.dataset.lang===l));
+  initTest();
+}
+function togglePunct(el){
+  T.punct=!T.punct;el.textContent=T.punct?'вкл':'выкл';el.classList.toggle('on',T.punct);initTest();
+}
+function toggleNums(el){
+  T.nums=!T.nums;el.textContent=T.nums?'вкл':'выкл';el.classList.toggle('on',T.nums);initTest();
+}
+
+// ══════════════════════════════════════════════
+//  NOTIFICATIONS
+// ══════════════════════════════════════════════
+function notify(type,msg){
+  const stack=document.getElementById('notif-stack');
+  const el=document.createElement('div');
+  el.className=`notif ${type}`;
+  el.innerHTML=`<span class="notif-icon"></span><span>${msg}</span>`;
+  stack.appendChild(el);
+  setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300);},3000);
+}
+
+function subscribeNotify(inputId){
+  const val = document.getElementById(inputId).value.trim();
+  if(!val || !val.includes('@')){notify('err','Введи корректный email');return;}
+  document.getElementById(inputId).value='';
+  notify('ok','Уведомим тебя как только будет готово!');
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+loadSettings();
+initTest();
+
+document.addEventListener('touchstart',e=>{
+  if(currentPage==='typing'&&document.getElementById('typer-box').contains(e.target)){
+    focusInp();
+  }
+});
+</script>
+</body>
+</html>
